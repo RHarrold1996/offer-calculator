@@ -304,6 +304,7 @@
             <select id="arvRemodelType">
               <option value="25">Full Interior Remodel — $25/sqft</option>
               <option value="35">Full Gut — $35/sqft</option>
+              <option value="45">Full Gut + Exterior — $45/sqft</option>
             </select>
           </div>
           <div class="subcalc-total" style="margin-top:6px;">
@@ -326,7 +327,7 @@
 
           <div class="subcalc-title" style="margin-top:16px;">Extra systems (added to both totals above)</div>
           <div class="extra-row">
-            <label class="checklabel"><input type="checkbox" id="roofCheck"> Roof ($5.00/sqft)</label>
+            <label class="checklabel"><input type="checkbox" id="roofCheck"> Roof</label>
             <div class="money-input"><span>$</span><input type="number" id="roofCost" value="0" min="0" step="250" disabled></div>
           </div>
           <div class="extra-row">
@@ -528,7 +529,6 @@
   });
 
   // --- Repair cost sub-calculator (both totals compute live, no apply button needed) ---
-  const EXTRA_RATES = { roof: 5 }; // $/sqft — rough drafts, tune to your own numbers
 
   // AC/HVAC: $7,500 base for a ~1600 sqft home (3.5 ton), +$2,500 per 500 sqft above that
   function computeAcCost(sqft) {
@@ -538,12 +538,20 @@
     return base + steps * 2500;
   }
 
+  // Roof: $7,000 base for a ~1600 sqft home, +$1,500 per 500 sqft above that (draft estimate — tune to your own numbers)
+  function computeRoofCost(sqft) {
+    const base = 7000;
+    if (sqft <= 1600) return base;
+    const steps = Math.ceil((sqft - 1600) / 500);
+    return base + steps * 1500;
+  }
+
   function toggleExtra(checkId, costId, key) {
     const checked = $(checkId).checked;
     $(costId).disabled = !checked;
     if (checked && key !== 'foundation') {
       const sqft = parseFloat($('sqft').value) || 0;
-      $(costId).value = key === 'ac' ? computeAcCost(sqft) : Math.round(sqft * EXTRA_RATES[key]);
+      $(costId).value = key === 'ac' ? computeAcCost(sqft) : (key === 'roof' ? computeRoofCost(sqft) : 0);
     } else {
       $(costId).value = 0;
     }
@@ -683,11 +691,13 @@
   function setRange(rangeId, pointId, low, high, point) {
     const lowClamped = Math.max(0, low);
     const highClamped = Math.max(0, high);
-    if (Math.abs(highClamped - lowClamped) < 500) {
-      $(rangeId).textContent = fmtDown(point);
+    const lowRounded = fmtDown(lowClamped);
+    const highRounded = fmtDown(highClamped);
+    if (lowRounded === highRounded) {
+      $(rangeId).textContent = lowRounded;
       $(pointId).textContent = '';
     } else {
-      $(rangeId).textContent = `${fmtDown(lowClamped)} – ${fmtDown(highClamped)}`;
+      $(rangeId).textContent = `${lowRounded} – ${highRounded}`;
       $(pointId).textContent = `Midpoint: ${fmtDown(point)}`;
     }
   }
@@ -695,8 +705,10 @@
   function fmtRange(low, high, point) {
     const lowClamped = Math.max(0, low);
     const highClamped = Math.max(0, high);
-    if (Math.abs(highClamped - lowClamped) < 500) return fmtDown(point);
-    return `${fmtDown(lowClamped)} – ${fmtDown(highClamped)}`;
+    const lowRounded = fmtDown(lowClamped);
+    const highRounded = fmtDown(highClamped);
+    if (lowRounded === highRounded) return lowRounded;
+    return `${lowRounded} – ${highRounded}`;
   }
 
   function resetDefaults() {
