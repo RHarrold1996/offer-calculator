@@ -247,7 +247,7 @@
   .send-result {
     font-size: 12px;
     margin-top: 8px;
-    display: none;
+    color: var(--text-muted);
   }
   .send-result.ok { color: #1a7d3a; }
   .send-result.err { color: #b3261e; }
@@ -490,9 +490,8 @@
       <div class="summary-panel" id="summaryPanel"></div>
 
       <div class="send-panel">
-        <div class="link-status" id="linkStatus">Checking lead link…</div>
-        <button class="send-btn" id="sendBtn" onclick="sendOfferToGhl()" disabled>Send Update to GHL Notes</button>
-        <div class="send-result" id="sendResult"></div>
+        <button class="send-btn" id="copyBtn" onclick="copyReport()">Copy Report</button>
+        <div class="send-result" id="sendResult">Paste this into the contact's Notes in GHL — no setup needed, works every time.</div>
       </div>
     </div>
 
@@ -500,13 +499,6 @@
 </div>
 
 <script>
-  // ---- GHL sync config ----
-  // Paste your Inbound Webhook URL here once you've built the "Offer Calculator Intake" workflow in GHL.
-  const GHL_WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/S6Ppgyu2jdR8Iq0DP213/webhook-trigger/c58e85bc-9ff9-48c6-8ac9-53703b10a0d1'
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const contactId = urlParams.get('contact_id') || '';
-  const opportunityId = urlParams.get('opportunity_id') || '';
   let latestCalc = null;
 
   const $ = id => document.getElementById(id);
@@ -726,27 +718,12 @@
     calculate();
   }
 
-  // ---- GHL sync ----
-  function setupLinkStatus() {
-    const statusEl = $('linkStatus');
-    const btn = $('sendBtn');
-    if (contactId) {
-      statusEl.textContent = `Linked to lead (contact_id: ${contactId})`;
-      statusEl.className = 'link-status linked';
-      btn.disabled = false;
-    } else {
-      statusEl.textContent = 'Not linked to a specific lead — open this from the link GHL sends the assigned rep, not the general sidebar shortcut, to enable sending.';
-      statusEl.className = 'link-status unlinked';
-      btn.disabled = true;
-    }
-  }
-
+  // ---- Report to clipboard (no GHL setup required) ----
   function buildOfferSnapshot() {
     if (!latestCalc) return '';
     const c = latestCalc;
     const lines = [
       `Offer Calculator snapshot — ${new Date().toLocaleString('en-US')}`,
-      `Selected strategy: ${c.strategyLabel}`,
       ``,
       `ARV: ${fmt(c.arv)}  ·  Adjusted Comps: ${fmt(c.adjComps)}`,
       `Repairs to ARV: ${fmt(c.repairsToArv)}  ·  Repairs to As-Is: ${fmt(c.repairsToAsIs)}`,
@@ -759,56 +736,46 @@
     return lines.join('\n');
   }
 
-  function sendOfferToGhl() {
+  function copyReport() {
     const resultEl = $('sendResult');
-    resultEl.style.display = 'block';
+    const text = buildOfferSnapshot();
 
-    if (!GHL_WEBHOOK_URL) {
+    if (!text) {
       resultEl.className = 'send-result err';
-      resultEl.textContent = 'No webhook URL configured yet — paste your GHL Inbound Webhook URL into GHL_WEBHOOK_URL in the code.';
-      return;
-    }
-    if (!latestCalc || !contactId) {
-      resultEl.className = 'send-result err';
-      resultEl.textContent = 'Missing calculation or lead link — cannot send.';
+      resultEl.textContent = 'Nothing to copy yet — enter some numbers first.';
       return;
     }
 
-    // Always logs the full current snapshot (all three offers) — no single "final offer" selection needed
-    const payload = {
-      contact_id: contactId,
-      opportunity_id: opportunityId,
-      snapshot: buildOfferSnapshot(),
-      sent_at: new Date().toISOString()
+    const fallbackCopy = () => {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(textarea);
     };
 
-    const btn = $('sendBtn');
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
+    const showSuccess = () => {
+      resultEl.className = 'send-result ok';
+      resultEl.textContent = 'Copied ✓ — now paste into the contact\'s Notes in GHL.';
+    };
 
-    fetch(GHL_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Request failed');
-        resultEl.className = 'send-result ok';
-        resultEl.textContent = 'Sent to GHL notes ✓';
-      })
-      .catch(() => {
-        resultEl.className = 'send-result err';
-        resultEl.textContent = 'Something went wrong sending this — check the webhook URL and try again.';
-      })
-      .finally(() => {
-        btn.disabled = !contactId;
-        btn.textContent = 'Send Update to GHL Notes';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showSuccess).catch(() => {
+        fallbackCopy();
+        showSuccess();
       });
+    } else {
+      fallbackCopy();
+      showSuccess();
+    }
   }
 
   updateSubcalc();
   updateSubcalcButtonLabel();
-  setupLinkStatus();
   calculate();
 </script>
 
