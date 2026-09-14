@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offer Calculator — Robert Buys Houses</title>
+<style>
+  :root {
+    --slate: #BDC3CA;
+    --blue: #006EC1;
+    --navy: #224066;
+    --orange: #FF6F00;
+    --bg: #F5F6F7;
+    --card-bg: #FFFFFF;
+    --text: #1B2530;
+    --text-muted: #5B6673;
+    --border: #DCE0E4;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  header h1 { font-size: 20px; font-weight: 700; color: var(--navy); margin: 0; }
+  header .tag { font-size: 13px; color: var(--text-muted); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+  }
+
+  .panel h2 { font-size: 14px; font-weight: 700; color: var(--navy); margin: 0 0 14px 0; }
+  .section-divider {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin: 18px 0 10px 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+  .field { margin-bottom: 14px; }
+
+  .field input[type="number"], .field select {
+    width: 100%;
+    padding: 9px 10px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+  }
+  .field input[type="number"]:focus, .field select:focus { outline: none; border-color: var(--blue); }
+
+  .money-input { position: relative; }
+  .money-input span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 15px; }
+  .money-input input { padding-left: 24px !important; }
+
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: -8px; margin-bottom: 14px; line-height: 1.4; }
+
+  details { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 12px; }
+  summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 10px; }
+
+  .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+
+  .subcalc {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .subcalc .subcalc-title { font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+
+  .extra-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .extra-row label.checklabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0;
+    flex: 0 0 110px;
+  }
+  .extra-row input[type="checkbox"] { width: 16px; height: 16px; }
+  .extra-row .money-input { flex: 1; }
+  .extra-row .money-input input:disabled { background: #EDEFF1; color: var(--text-muted); }
+
+  .subcalc-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 12px 0 10px 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .apply-btn {
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .apply-btn:hover { background: var(--navy); }
+
+  .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .results { grid-template-columns: 1fr; } }
+
+  .offer-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    border-top: 3px solid var(--blue);
+  }
+  .offer-card.novation { border-top-color: var(--navy); }
+  .offer-card.realtor { border-top-color: var(--orange); }
+
+  .offer-card h3 { font-size: 14px; font-weight: 700; margin: 0 0 2px 0; color: var(--navy); }
+  .offer-card .desc { font-size: 12px; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.4; }
+  .offer-card .range { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 4px; }
+  .offer-card .point { font-size: 12px; color: var(--text-muted); }
+
+  .card-details {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .card-details summary {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--blue);
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+  .card-details-body { margin-top: 10px; }
+  .card-details-body .subhead {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin: 10px 0 4px 0;
+  }
+  .card-details-body .subhead:first-child { margin-top: 0; }
+  .card-details-body ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .card-details-body li { margin-bottom: 3px; }
+
+  .warn {
+    grid-column: 1 / -1;
+    background: #FFF4E5;
+    border: 1px solid var(--orange);
+    color: #7A3E00;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    display: none;
+  }
+
+  .summary-panel {
+    margin-top: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .summary-panel b { color: var(--text); }
+
+  .send-panel {
+    margin-top: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .send-panel .link-status {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .send-panel .link-status.linked { color: #1a7d3a; }
+  .send-panel .link-status.unlinked { color: #7A3E00; }
+  .send-btn {
+    width: 100%;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .send-btn:hover { opacity: 0.9; }
+  .send-btn:disabled { background: var(--slate); cursor: not-allowed; opacity: 0.7; }
+  .send-result {
+    font-size: 12px;
+    margin-top: 8px;
+    display: none;
+  }
+  .send-result.ok { color: #1a7d3a; }
+  .send-result.err { color: #b3261e; }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .reset-btn:hover { border-color: var(--blue); color: var(--blue); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Offer Calculator</h1>
+    <span class="tag">Robert Buys Houses — ballpark, in-field use</span>
+  </header>
+
+  <div class="layout">
+
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <h2>Property Inputs</h2>
+
+      <div class="field">
+        <label for="arv">ARV (full-rehab / flip comps)</label>
+        <div class="money-input"><span>$</span><input type="number" id="arv" value="0" min="0" step="1000"></div>
+      </div>
+      <div class="hint">Value after a full remodel. Drives the wholesale offer only.</div>
+
+      <div class="field">
+        <label for="adjComps">Adjusted Comps (as-is / similar-condition)</label>
+        <div class="money-input"><span>$</span><input type="number" id="adjComps" value="0" min="0" step="1000"></div>
+      </div>
+      <div class="hint">Pulled from comparable properties in similar condition — not flips. Drives the Equity Protection Program and realtor referral.</div>
+
+      <!-- REPAIR COST CALCULATOR -->
+      <details open>
+        <summary>Repair cost calculator (by sqft)</summary>
+        <div class="subcalc">
+          <div class="subcalc-title">Base cost</div>
+          <div class="field" style="margin-bottom:10px;">
+            <label for="sqft">Square Footage</label>
+            <input type="number" id="sqft" value="1600" min="0" step="50">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="remodelType">Remodel Type</label>
+            <select id="remodelType">
+              <option value="0|asis">Move-in Ready — $0/sqft</option>
+              <option value="12|asis">Functional Repairs — $12/sqft</option>
+              <option value="25|arv">Full Interior Remodel — $25/sqft</option>
+              <option value="35|arv">Full Gut — $35/sqft</option>
+            </select>
+          </div>
+          <div class="hint" style="margin-top:8px;margin-bottom:0;">Move-in Ready / Functional Repairs feed the As-Is repair cost below. Full Interior / Full Gut feed the To-ARV repair cost.</div>
+
+          <div class="subcalc-title" style="margin-top:14px;">Extra systems (not included above)</div>
+          <div class="extra-row">
+            <label class="checklabel"><input type="checkbox" id="roofCheck"> Roof ($4.50/sqft)</label>
+            <div class="money-input"><span>$</span><input type="number" id="roofCost" value="0" min="0" step="250" disabled></div>
+          </div>
+          <div class="extra-row">
+            <label class="checklabel"><input type="checkbox" id="acCheck"> AC / HVAC</label>
+            <div class="money-input"><span>$</span><input type="number" id="acCost" value="0" min="0" step="250" disabled></div>
+          </div>
+          <div class="extra-row">
+            <label class="checklabel"><input type="checkbox" id="foundationCheck"> Foundation</label>
+            <div class="money-input"><span>$</span><input type="number" id="foundationCost" value="0" min="0" step="250" disabled></div>
+          </div>
+          <div class="hint" style="margin:0 0 12px 0;">Roof and AC/HVAC auto-fill a starting estimate from square footage when checked (rough draft rates — overwrite with real numbers when you have them). Foundation is pier-based and too variable to formula — check it to unlock the field and type your own number.</div>
+
+          <div class="subcalc-total">
+            <span>Repair cost</span>
+            <span id="subcalcTotal">$0</span>
+          </div>
+          <button class="apply-btn" id="subcalcApplyBtn" onclick="applySubcalc()">Apply to As-Is Repair Cost</button>
+          <div class="hint" id="subcalcAppliedNote" style="margin:8px 0 0 0; display:none;"></div>
+        </div>
+      </details>
+
+      <div class="field" style="margin-top:14px;">
+        <label for="repairsToArv">Repair Cost — To ARV (full remodel)</label>
+        <div class="money-input"><span>$</span><input type="number" id="repairsToArv" value="0" min="0" step="500"></div>
+      </div>
+      <div class="hint">Cost to bring it to full ARV. Used in the wholesale formula.</div>
+
+      <div class="field">
+        <label for="repairsToAsIs">Repair Cost — To As-Is (functional)</label>
+        <div class="money-input"><span>$</span><input type="number" id="repairsToAsIs" value="0" min="0" step="500"></div>
+      </div>
+      <div class="hint">Cost to bring it to the as-is/Adjusted Comps value. Used in the Equity Protection Program formula.</div>
+
+      <details>
+        <summary>Advanced assumptions</summary>
+        <div class="adv-grid">
+          <div class="field">
+            <label for="wholesalePct">Wholesale % of ARV</label>
+            <input type="number" id="wholesalePct" value="75" min="0" max="100" step="1">
+          </div>
+          <div class="field">
+            <label for="wholesaleFee">Wholesale Fee</label>
+            <div class="money-input"><span>$</span><input type="number" id="wholesaleFee" value="20000" min="0" step="500"></div>
+          </div>
+          <div class="field">
+            <label for="novationPct">Equity Protection Program % of Adjusted Comps</label>
+            <input type="number" id="novationPct" value="90" min="0" max="100" step="1">
+          </div>
+          <div class="field">
+            <label for="novationFeePct">Equity Protection Program Fee % (of Adjusted Comps)</label>
+            <input type="number" id="novationFeePct" value="6" min="0" max="100" step="0.5">
+          </div>
+        </div>
+        <div class="field" style="margin-top:4px;">
+          <label for="uncertainty">Estimate Uncertainty %</label>
+          <input type="number" id="uncertainty" value="10" min="0" max="50" step="1">
+        </div>
+        <div class="hint">Widens each result into a range instead of one fixed number — useful before you've confirmed repairs and comps in person.</div>
+        <button class="reset-btn" onclick="resetDefaults()">Reset to defaults</button>
+      </details>
+    </div>
+
+    <!-- RESULTS -->
+    <div>
+      <div class="panel" style="margin-bottom:14px;border-top:3px solid var(--orange);">
+        <h2>Phone Quote Script</h2>
+        <div class="field" style="margin-bottom:10px;">
+          <label for="phoneStrategy">Seller leaning toward</label>
+          <select id="phoneStrategy">
+            <option value="wholesale">Wholesale Cash</option>
+            <option value="novation">Equity Protection Program</option>
+            <option value="realtor">Realtor Referral</option>
+          </select>
+        </div>
+        <div id="phoneScriptText" style="font-size:16px;font-weight:600;color:var(--navy);line-height:1.5;"></div>
+        <div class="hint" style="margin-top:8px;margin-bottom:0;">Uses the repair cost estimate and the uncertainty % below — widen the uncertainty % before comps are pulled, tighten it after.</div>
+      </div>
+
+      <div class="results">
+
+        <div class="warn" id="warnBox"></div>
+
+        <div class="offer-card wholesale">
+          <h3>Wholesale Cash Offer</h3>
+          <p class="desc">Fast, as-is, no repairs on the seller. ARV x 75% − repairs − our fee.</p>
+          <div class="range" id="wholesaleRange">—</div>
+          <div class="point" id="wholesalePoint"></div>
+          <div class="point" id="wholesaleCeiling" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);"></div>
+
+          <details class="card-details">
+            <summary>Benefits &amp; Requirements</summary>
+            <div class="card-details-body">
+              <div class="subhead">Best fit when</div>
+              <ul>
+                <li>Seller wants the fastest, simplest close possible</li>
+                <li>Speed and certainty matter more than top dollar</li>
+                <li>Can close quickly — often 7–14 days</li>
+                <li>No financing or lender contingencies to manage</li>
+              </ul>
+              <div class="subhead">Benefits to seller</div>
+              <ul>
+                <li>No repairs, no showings, no financing risk</li>
+                <li>Fast close — seller picks the closing date</li>
+                <li>We handle all paperwork and closing costs</li>
+              </ul>
+              <div class="hint" style="margin:10px 0 0 0;">Draft placeholder — replace with your actual wholesale program details.</div>
+            </div>
+          </details>
+        </div>
+
+        <div class="offer-card novation">
+          <h3>Equity Protection Program</h3>
+          <p class="desc">We fund repairs, list on the open market, seller nets the difference. Adjusted comps x 90% − repairs − our fee.</p>
+          <div class="range" id="novationRange">—</div>
+          <div class="point" id="novationPoint"></div>
+          <div class="point" id="novationCeiling" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);"></div>
+
+          <details class="card-details">
+            <summary>Benefits &amp; Requirements</summary>
+            <div class="card-details-body">
+              <div class="subhead">Ideal seller situation</div>
+              <ul>
+                <li>Not willing to take a low cash offer, but still motivated to sell</li>
+                <li>Wants convenience — a hands-off experience</li>
+                <li>Can wait roughly 60–75 days to close and get paid</li>
+                <li>If occupied: seller/tenants willing to give reasonable access for showings</li>
+              </ul>
+              <div class="subhead">Property condition</div>
+              <ul>
+                <li>Move-in ready (rent-ready)</li>
+                <li>Dated but functional</li>
+                <li>No major repairs or rehab needed</li>
+              </ul>
+              <div class="subhead">Benefits to seller</div>
+              <ul>
+                <li>Opens the buyer pool to cash investors and traditional buyers</li>
+                <li>We cover closing costs, commissions, and any repairs/updates</li>
+                <li>Seller gets exactly the agreed-upon net price</li>
+                <li>Hands-off, "5-star" experience — we handle inspections, negotiations, repairs, and closing</li>
+                <li>Typically nets a higher price than an all-cash offer</li>
+                <li>No agent commissions or paperwork hassle for the seller</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="offer-card realtor">
+          <h3>Realtor Referral</h3>
+          <p class="desc">As-is market value from comparable (non-flip) comps — what an agent could likely list it for today.</p>
+          <div class="range" id="realtorRange">—</div>
+          <div class="point" id="realtorPoint"></div>
+
+          <details class="card-details">
+            <summary>Benefits &amp; Requirements</summary>
+            <div class="card-details-body">
+              <div class="subhead">Best fit when</div>
+              <ul>
+                <li>Property or seller isn't a fit for a cash or Equity Protection Program purchase</li>
+                <li>Seller wants top dollar and is willing to wait for a traditional sale</li>
+                <li>Willing to handle showings, repairs, and negotiations, with an agent's help</li>
+              </ul>
+              <div class="subhead">Benefits to seller</div>
+              <ul>
+                <li>Full access to the open market for maximum price</li>
+                <li>Professional agent representation throughout the sale</li>
+                <li>No obligation — this is a referral only, we don't profit directly from this path</li>
+              </ul>
+              <div class="hint" style="margin:10px 0 0 0;">Draft placeholder — replace with your actual referral program details.</div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+
+      <div class="summary-panel" id="summaryPanel"></div>
+
+      <div class="send-panel">
+        <div class="link-status" id="linkStatus">Checking lead link…</div>
+        <button class="send-btn" id="sendBtn" onclick="sendOfferToGhl()" disabled>Send Update to GHL Notes</button>
+        <div class="send-result" id="sendResult"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ---- GHL sync config ----
+  // Paste your Inbound Webhook URL here once you've built the "Offer Calculator Intake" workflow in GHL.
+  const GHL_WEBHOOK_URL = ''; // e.g. 'https://services.leadconnectorhq.com/hooks/xxxxx/webhook-trigger/xxxxx'
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const contactId = urlParams.get('contact_id') || '';
+  const opportunityId = urlParams.get('opportunity_id') || '';
+  let latestCalc = null;
+
+  const $ = id => document.getElementById(id);
+  const fmt = n => '$' + Math.max(0, Math.round(n)).toLocaleString('en-US');
+  // Estimates shown to sellers round DOWN to the nearest $5,000 — keeps every quoted number conservative
+  const fmtDown = n => '$' + (Math.floor(Math.max(0, n) / 5000) * 5000).toLocaleString('en-US');
+
+  const repairsToArvEl = $('repairsToArv');
+  const repairsToAsIsEl = $('repairsToAsIs');
+
+  repairsToArvEl.addEventListener('input', calculate);
+  repairsToAsIsEl.addEventListener('input', calculate);
+
+  document.querySelectorAll('.panel input, .panel select').forEach(el => {
+    if (!['repairsToArv', 'repairsToAsIs', 'sqft', 'remodelType', 'roofCheck', 'roofCost', 'acCheck', 'acCost', 'foundationCheck', 'foundationCost'].includes(el.id)) {
+      el.addEventListener('input', calculate);
+    }
+  });
+
+  // --- Repair cost sub-calculator ---
+  const EXTRA_RATES = { roof: 4.5 }; // $/sqft — rough drafts, tune to your own numbers
+
+  // AC/HVAC: $7,500 base for a ~1600 sqft home (3.5 ton), +$2,500 per 500 sqft above that
+  function computeAcCost(sqft) {
+    const base = 7500;
+    if (sqft <= 1600) return base;
+    const steps = Math.ceil((sqft - 1600) / 500);
+    return base + steps * 2500;
+  }
+
+  function toggleExtra(checkId, costId, key) {
+    const checked = $(checkId).checked;
+    $(costId).disabled = !checked;
+    if (checked && key !== 'foundation') {
+      const sqft = parseFloat($('sqft').value) || 0;
+      $(costId).value = key === 'ac' ? computeAcCost(sqft) : Math.round(sqft * EXTRA_RATES[key]);
+    } else {
+      $(costId).value = 0;
+    }
+  }
+  ['roof', 'ac', 'foundation'].forEach(key => {
+    $(key + 'Check').addEventListener('change', () => { toggleExtra(key + 'Check', key + 'Cost', key); updateSubcalc(); });
+    $(key + 'Cost').addEventListener('input', updateSubcalc);
+  });
+  $('sqft').addEventListener('input', updateSubcalc);
+  $('remodelType').addEventListener('input', () => { updateSubcalc(); updateSubcalcButtonLabel(); });
+
+  function updateSubcalcButtonLabel() {
+    const [, target] = $('remodelType').value.split('|');
+    $('subcalcApplyBtn').textContent = target === 'arv'
+      ? 'Apply to To-ARV Repair Cost'
+      : 'Apply to As-Is Repair Cost';
+  }
+
+  function updateSubcalc() {
+    const sqft = parseFloat($('sqft').value) || 0;
+    const [rate] = $('remodelType').value.split('|').map(Number);
+    const base = sqft * (rate || 0);
+    const roof = $('roofCheck').checked ? (parseFloat($('roofCost').value) || 0) : 0;
+    const ac = $('acCheck').checked ? (parseFloat($('acCost').value) || 0) : 0;
+    const foundation = $('foundationCheck').checked ? (parseFloat($('foundationCost').value) || 0) : 0;
+    const total = base + roof + ac + foundation;
+    $('subcalcTotal').textContent = fmt(total);
+    $('subcalcAppliedNote').style.display = 'none'; // any recalculation invalidates the previous "applied" note
+    return total;
+  }
+
+  function applySubcalc() {
+    const total = updateSubcalc();
+    const [, target] = $('remodelType').value.split('|');
+    if (target === 'arv') {
+      repairsToArvEl.value = Math.round(total);
+    } else {
+      repairsToAsIsEl.value = Math.round(total);
+    }
+
+    const hasExtras = $('roofCheck').checked || $('acCheck').checked || $('foundationCheck').checked;
+    const note = $('subcalcAppliedNote');
+    if (hasExtras) {
+      const targetLabel = target === 'arv' ? 'To-ARV' : 'As-Is';
+      const otherLabel = target === 'arv' ? 'As-Is' : 'To-ARV';
+      note.style.display = 'block';
+      note.textContent = `Applied, including the checked extras, to ${targetLabel} Repair Cost. If those same repairs (roof/AC/foundation) also apply to the ${otherLabel} number, apply again there deliberately — don't assume it carried over.`;
+    } else {
+      note.style.display = 'none';
+    }
+
+    calculate();
+  }
+
+  // --- Main offer calculation ---
+  function calculate() {
+    const arv = parseFloat($('arv').value) || 0;
+    const adjComps = parseFloat($('adjComps').value) || 0;
+    const repairsToArv = parseFloat(repairsToArvEl.value) || 0;
+    const repairsToAsIs = parseFloat(repairsToAsIsEl.value) || 0;
+    const uncertainty = (parseFloat($('uncertainty').value) || 0) / 100;
+
+    const wholesalePct = (parseFloat($('wholesalePct').value) || 0) / 100;
+    const wholesaleFee = parseFloat($('wholesaleFee').value) || 0;
+
+    const novationPct = (parseFloat($('novationPct').value) || 0) / 100;
+    const novationFeePct = (parseFloat($('novationFeePct').value) || 0) / 100;
+    const novationFee = adjComps * novationFeePct;
+
+    const rArvLow = repairsToArv * (1 - uncertainty);
+    const rArvHigh = repairsToArv * (1 + uncertainty);
+    const rAsIsLow = repairsToAsIs * (1 - uncertainty);
+    const rAsIsHigh = repairsToAsIs * (1 + uncertainty);
+
+    const wholesalePoint = arv * wholesalePct - repairsToArv - wholesaleFee;
+    const wholesaleHigh = arv * wholesalePct - rArvLow - wholesaleFee;
+    const wholesaleLow = arv * wholesalePct - rArvHigh - wholesaleFee;
+
+    const novationPoint = adjComps * novationPct - repairsToAsIs - novationFee;
+    const novationHigh = adjComps * novationPct - rAsIsLow - novationFee;
+    const novationLow = adjComps * novationPct - rAsIsHigh - novationFee;
+
+    // Realtor referral is a direct as-is value, not a repair-based calculation — no uncertainty range applied
+    const realtorPoint = adjComps;
+    const realtorHigh = adjComps;
+    const realtorLow = adjComps;
+
+    setRange('wholesaleRange', 'wholesalePoint', wholesaleLow, wholesaleHigh, wholesalePoint);
+    setRange('novationRange', 'novationPoint', novationLow, novationHigh, novationPoint);
+    setRange('realtorRange', 'realtorPoint', realtorLow, realtorHigh, realtorPoint);
+
+    // Pre-fee ceiling: same formula, fee left out — the breakeven point the rep can negotiate up toward on the spot
+    const wholesaleCeilingPoint = wholesalePoint + wholesaleFee;
+    const wholesaleCeilingLow = wholesaleLow + wholesaleFee;
+    const wholesaleCeilingHigh = wholesaleHigh + wholesaleFee;
+
+    const novationCeilingPoint = novationPoint + novationFee;
+    const novationCeilingLow = novationLow + novationFee;
+    const novationCeilingHigh = novationHigh + novationFee;
+
+    $('wholesaleCeiling').innerHTML =
+      `Ceiling before our fee: <b>${fmtRange(wholesaleCeilingLow, wholesaleCeilingHigh, wholesaleCeilingPoint)}</b><br>` +
+      `<span style="opacity:.7;">Room between the offer above and this number is our target profit — negotiate within it.</span>`;
+
+    $('novationCeiling').innerHTML =
+      `Ceiling before our fee: <b>${fmtRange(novationCeilingLow, novationCeilingHigh, novationCeilingPoint)}</b><br>` +
+      `<span style="opacity:.7;">Room between the offer above and this number is our target profit — negotiate within it.</span>`;
+
+    const warnBox = $('warnBox');
+    const warnings = [];
+    if (wholesalePoint <= 0) {
+      warnings.push('Wholesale offer is at or below $0 — this deal may not pencil as a cash offer at this repair estimate.');
+    }
+    if (novationPoint <= 0) {
+      warnings.push('Equity Protection Program offer is at or below $0 — this deal may not pencil at this repair estimate.');
+    }
+    if (warnings.length) {
+      warnBox.style.display = 'block';
+      warnBox.innerHTML = warnings.join('<br>');
+    } else {
+      warnBox.style.display = 'none';
+    }
+
+    if (adjComps > arv && arv > 0) {
+      warnings.push('Adjusted Comps is higher than ARV — Adjusted Comps should be the as-is value and ARV the full-remodel value, so ARV should normally be the larger number. Double-check these two before quoting.');
+      warnBox.style.display = 'block';
+      warnBox.innerHTML = warnings.join('<br>');
+    }
+
+    // Phone quote script — reuses the same ranges above, just spoken for whichever strategy the seller leans toward
+    const strategy = $('phoneStrategy').value;
+    let scriptLow, scriptHigh, label;
+    if (strategy === 'wholesale') { scriptLow = wholesaleLow; scriptHigh = wholesaleHigh; label = 'a wholesale cash offer'; }
+    else if (strategy === 'novation') { scriptLow = novationLow; scriptHigh = novationHigh; label = 'our Equity Protection Program'; }
+    else { scriptLow = realtorLow; scriptHigh = realtorHigh; label = 'a realtor referral'; }
+    const scriptLowC = Math.max(0, scriptLow);
+    const scriptHighC = Math.max(0, scriptHigh);
+    $('phoneScriptText').textContent =
+      `"Based on what you've told me about the property, and going with ${label}, we'd likely be somewhere between ${fmtDown(scriptLowC)} and ${fmtDown(scriptHighC)}."`;
+
+    $('summaryPanel').innerHTML =
+      `<b>ARV</b> ${fmt(arv)} &nbsp;·&nbsp; <b>Adjusted Comps</b> ${fmt(adjComps)}<br>` +
+      `<b>Repairs to ARV</b> ${fmt(repairsToArv)} &nbsp;·&nbsp; <b>Repairs to As-Is</b> ${fmt(repairsToAsIs)} ` +
+      `${uncertainty > 0 ? `(±${Math.round(uncertainty*100)}% uncertainty applied to ranges)` : ''}`;
+
+    // Keep the latest full calculation available for the "Send Offer to GHL" button
+    latestCalc = {
+      arv, adjComps, repairsToArv, repairsToAsIs, uncertainty,
+      wholesale: { low: wholesaleLow, high: wholesaleHigh, point: wholesalePoint },
+      novation: { low: novationLow, high: novationHigh, point: novationPoint },
+      realtor: { low: realtorLow, high: realtorHigh, point: realtorPoint },
+      strategy, strategyLabel: label
+    };
+  }
+
+  function setRange(rangeId, pointId, low, high, point) {
+    const lowClamped = Math.max(0, low);
+    const highClamped = Math.max(0, high);
+    if (Math.abs(highClamped - lowClamped) < 500) {
+      $(rangeId).textContent = fmtDown(point);
+      $(pointId).textContent = '';
+    } else {
+      $(rangeId).textContent = `${fmtDown(lowClamped)} – ${fmtDown(highClamped)}`;
+      $(pointId).textContent = `Midpoint: ${fmtDown(point)}`;
+    }
+  }
+
+  function fmtRange(low, high, point) {
+    const lowClamped = Math.max(0, low);
+    const highClamped = Math.max(0, high);
+    if (Math.abs(highClamped - lowClamped) < 500) return fmtDown(point);
+    return `${fmtDown(lowClamped)} – ${fmtDown(highClamped)}`;
+  }
+
+  function resetDefaults() {
+    $('wholesalePct').value = 75;
+    $('wholesaleFee').value = 20000;
+    $('novationPct').value = 90;
+    $('novationFeePct').value = 6;
+    $('uncertainty').value = 10;
+    calculate();
+  }
+
+  // ---- GHL sync ----
+  function setupLinkStatus() {
+    const statusEl = $('linkStatus');
+    const btn = $('sendBtn');
+    if (contactId) {
+      statusEl.textContent = `Linked to lead (contact_id: ${contactId})`;
+      statusEl.className = 'link-status linked';
+      btn.disabled = false;
+    } else {
+      statusEl.textContent = 'Not linked to a specific lead — open this from the link GHL sends the assigned rep, not the general sidebar shortcut, to enable sending.';
+      statusEl.className = 'link-status unlinked';
+      btn.disabled = true;
+    }
+  }
+
+  function buildOfferSnapshot() {
+    if (!latestCalc) return '';
+    const c = latestCalc;
+    const lines = [
+      `Offer Calculator snapshot — ${new Date().toLocaleString('en-US')}`,
+      `Selected strategy: ${c.strategyLabel}`,
+      ``,
+      `ARV: ${fmt(c.arv)}  ·  Adjusted Comps: ${fmt(c.adjComps)}`,
+      `Repairs to ARV: ${fmt(c.repairsToArv)}  ·  Repairs to As-Is: ${fmt(c.repairsToAsIs)}`,
+      `Uncertainty: ±${Math.round(c.uncertainty * 100)}%`,
+      ``,
+      `Wholesale Cash Offer: ${fmtRange(c.wholesale.low, c.wholesale.high, c.wholesale.point)}`,
+      `Equity Protection Program: ${fmtRange(c.novation.low, c.novation.high, c.novation.point)}`,
+      `Realtor Referral: ${fmtDown(c.realtor.point)}`
+    ];
+    return lines.join('\n');
+  }
+
+  function sendOfferToGhl() {
+    const resultEl = $('sendResult');
+    resultEl.style.display = 'block';
+
+    if (!GHL_WEBHOOK_URL) {
+      resultEl.className = 'send-result err';
+      resultEl.textContent = 'No webhook URL configured yet — paste your GHL Inbound Webhook URL into GHL_WEBHOOK_URL in the code.';
+      return;
+    }
+    if (!latestCalc || !contactId) {
+      resultEl.className = 'send-result err';
+      resultEl.textContent = 'Missing calculation or lead link — cannot send.';
+      return;
+    }
+
+    // Always logs the full current snapshot (all three offers) — no single "final offer" selection needed
+    const payload = {
+      contact_id: contactId,
+      opportunity_id: opportunityId,
+      snapshot: buildOfferSnapshot(),
+      sent_at: new Date().toISOString()
+    };
+
+    const btn = $('sendBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    fetch(GHL_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Request failed');
+        resultEl.className = 'send-result ok';
+        resultEl.textContent = 'Sent to GHL notes ✓';
+      })
+      .catch(() => {
+        resultEl.className = 'send-result err';
+        resultEl.textContent = 'Something went wrong sending this — check the webhook URL and try again.';
+      })
+      .finally(() => {
+        btn.disabled = !contactId;
+        btn.textContent = 'Send Update to GHL Notes';
+      });
+  }
+
+  updateSubcalc();
+  updateSubcalcButtonLabel();
+  setupLinkStatus();
+  calculate();
+</script>
+
+</body>
+</html>
