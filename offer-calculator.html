@@ -294,25 +294,39 @@
       <details open>
         <summary>Repair cost calculator (by sqft)</summary>
         <div class="subcalc">
-          <div class="subcalc-title">Base cost</div>
-          <div class="field" style="margin-bottom:10px;">
+          <div class="field" style="margin-bottom:14px;">
             <label for="sqft">Square Footage</label>
             <input type="number" id="sqft" value="1600" min="0" step="50">
           </div>
-          <div class="field" style="margin-bottom:0;">
-            <label for="remodelType">Remodel Type</label>
-            <select id="remodelType">
-              <option value="0|asis">Move-in Ready — $0/sqft</option>
-              <option value="12|asis">Functional Repairs — $12/sqft</option>
-              <option value="25|arv">Full Interior Remodel — $25/sqft</option>
-              <option value="35|arv">Full Gut — $35/sqft</option>
+
+          <div class="subcalc-title">To-ARV remodel type</div>
+          <div class="field" style="margin-bottom:4px;">
+            <select id="arvRemodelType">
+              <option value="25">Full Interior Remodel — $25/sqft</option>
+              <option value="35">Full Gut — $35/sqft</option>
             </select>
           </div>
-          <div class="hint" style="margin-top:8px;margin-bottom:0;">Move-in Ready / Functional Repairs feed the As-Is repair cost below. Full Interior / Full Gut feed the To-ARV repair cost.</div>
+          <div class="subcalc-total" style="margin-top:6px;">
+            <span>Repair cost — To ARV</span>
+            <span id="arvSubcalcTotal">$0</span>
+          </div>
 
-          <div class="subcalc-title" style="margin-top:14px;">Extra systems (not included above)</div>
+          <div class="subcalc-title" style="margin-top:16px;">To-As-Is remodel type</div>
+          <div class="field" style="margin-bottom:4px;">
+            <select id="asIsRemodelType">
+              <option value="0">Move-in Ready — $0/sqft</option>
+              <option value="10">Functional Repairs — $10/sqft</option>
+            </select>
+          </div>
+          <div class="subcalc-total" style="margin-top:6px;">
+            <span>Repair cost — To As-Is</span>
+            <span id="asIsSubcalcTotal">$0</span>
+          </div>
+          <div class="hint" style="margin-top:8px;margin-bottom:0;">Both totals calculate live and fill the two fields below automatically — no button to click. Type directly into either field below to override its calculator value.</div>
+
+          <div class="subcalc-title" style="margin-top:16px;">Extra systems (added to both totals above)</div>
           <div class="extra-row">
-            <label class="checklabel"><input type="checkbox" id="roofCheck"> Roof ($4.50/sqft)</label>
+            <label class="checklabel"><input type="checkbox" id="roofCheck"> Roof ($5.00/sqft)</label>
             <div class="money-input"><span>$</span><input type="number" id="roofCost" value="0" min="0" step="250" disabled></div>
           </div>
           <div class="extra-row">
@@ -323,14 +337,7 @@
             <label class="checklabel"><input type="checkbox" id="foundationCheck"> Foundation</label>
             <div class="money-input"><span>$</span><input type="number" id="foundationCost" value="0" min="0" step="250" disabled></div>
           </div>
-          <div class="hint" style="margin:0 0 12px 0;">Roof and AC/HVAC auto-fill a starting estimate from square footage when checked (rough draft rates — overwrite with real numbers when you have them). Foundation is pier-based and too variable to formula — check it to unlock the field and type your own number.</div>
-
-          <div class="subcalc-total">
-            <span>Repair cost</span>
-            <span id="subcalcTotal">$0</span>
-          </div>
-          <button class="apply-btn" id="subcalcApplyBtn" onclick="applySubcalc()">Apply to As-Is Repair Cost</button>
-          <div class="hint" id="subcalcAppliedNote" style="margin:8px 0 0 0; display:none;"></div>
+          <div class="hint" style="margin:0;">Roof and AC/HVAC auto-fill a starting estimate from square footage when checked (rough draft rates — overwrite with real numbers when you have them). Foundation is pier-based and too variable to formula — check it to unlock the field and type your own number. Since a broken roof or AC needs fixing either way, these add into both the To-ARV and To-As-Is totals above.</div>
         </div>
       </details>
 
@@ -509,17 +516,19 @@
   const repairsToArvEl = $('repairsToArv');
   const repairsToAsIsEl = $('repairsToAsIs');
 
-  repairsToArvEl.addEventListener('input', calculate);
-  repairsToAsIsEl.addEventListener('input', calculate);
+  let arvManuallyEdited = false;
+  let asIsManuallyEdited = false;
+  repairsToArvEl.addEventListener('input', () => { arvManuallyEdited = true; calculate(); });
+  repairsToAsIsEl.addEventListener('input', () => { asIsManuallyEdited = true; calculate(); });
 
   document.querySelectorAll('.panel input, .panel select').forEach(el => {
-    if (!['repairsToArv', 'repairsToAsIs', 'sqft', 'remodelType', 'roofCheck', 'roofCost', 'acCheck', 'acCost', 'foundationCheck', 'foundationCost'].includes(el.id)) {
+    if (!['repairsToArv', 'repairsToAsIs', 'sqft', 'arvRemodelType', 'asIsRemodelType', 'roofCheck', 'roofCost', 'acCheck', 'acCost', 'foundationCheck', 'foundationCost'].includes(el.id)) {
       el.addEventListener('input', calculate);
     }
   });
 
-  // --- Repair cost sub-calculator ---
-  const EXTRA_RATES = { roof: 4.5 }; // $/sqft — rough drafts, tune to your own numbers
+  // --- Repair cost sub-calculator (both totals compute live, no apply button needed) ---
+  const EXTRA_RATES = { roof: 5 }; // $/sqft — rough drafts, tune to your own numbers
 
   // AC/HVAC: $7,500 base for a ~1600 sqft home (3.5 ton), +$2,500 per 500 sqft above that
   function computeAcCost(sqft) {
@@ -544,49 +553,30 @@
     $(key + 'Cost').addEventListener('input', updateSubcalc);
   });
   $('sqft').addEventListener('input', updateSubcalc);
-  $('remodelType').addEventListener('input', () => { updateSubcalc(); updateSubcalcButtonLabel(); });
-
-  function updateSubcalcButtonLabel() {
-    const [, target] = $('remodelType').value.split('|');
-    $('subcalcApplyBtn').textContent = target === 'arv'
-      ? 'Apply to To-ARV Repair Cost'
-      : 'Apply to As-Is Repair Cost';
-  }
+  $('arvRemodelType').addEventListener('input', updateSubcalc);
+  $('asIsRemodelType').addEventListener('input', updateSubcalc);
 
   function updateSubcalc() {
     const sqft = parseFloat($('sqft').value) || 0;
-    const [rate] = $('remodelType').value.split('|').map(Number);
-    const base = sqft * (rate || 0);
+    const arvRate = parseFloat($('arvRemodelType').value) || 0;
+    const asIsRate = parseFloat($('asIsRemodelType').value) || 0;
+
     const roof = $('roofCheck').checked ? (parseFloat($('roofCost').value) || 0) : 0;
     const ac = $('acCheck').checked ? (parseFloat($('acCost').value) || 0) : 0;
     const foundation = $('foundationCheck').checked ? (parseFloat($('foundationCost').value) || 0) : 0;
-    const total = base + roof + ac + foundation;
-    $('subcalcTotal').textContent = fmt(total);
-    $('subcalcAppliedNote').style.display = 'none'; // any recalculation invalidates the previous "applied" note
-    return total;
-  }
+    const extras = roof + ac + foundation;
 
-  function applySubcalc() {
-    const total = updateSubcalc();
-    const [, target] = $('remodelType').value.split('|');
-    if (target === 'arv') {
-      repairsToArvEl.value = Math.round(total);
-    } else {
-      repairsToAsIsEl.value = Math.round(total);
-    }
+    const arvTotal = sqft * arvRate + extras;
+    const asIsTotal = sqft * asIsRate + extras;
 
-    const hasExtras = $('roofCheck').checked || $('acCheck').checked || $('foundationCheck').checked;
-    const note = $('subcalcAppliedNote');
-    if (hasExtras) {
-      const targetLabel = target === 'arv' ? 'To-ARV' : 'As-Is';
-      const otherLabel = target === 'arv' ? 'As-Is' : 'To-ARV';
-      note.style.display = 'block';
-      note.textContent = `Applied, including the checked extras, to ${targetLabel} Repair Cost. If those same repairs (roof/AC/foundation) also apply to the ${otherLabel} number, apply again there deliberately — don't assume it carried over.`;
-    } else {
-      note.style.display = 'none';
-    }
+    $('arvSubcalcTotal').textContent = fmt(arvTotal);
+    $('asIsSubcalcTotal').textContent = fmt(asIsTotal);
+
+    if (!arvManuallyEdited) repairsToArvEl.value = Math.round(arvTotal);
+    if (!asIsManuallyEdited) repairsToAsIsEl.value = Math.round(asIsTotal);
 
     calculate();
+    return { arvTotal, asIsTotal };
   }
 
   // --- Main offer calculation ---
@@ -775,8 +765,6 @@
   }
 
   updateSubcalc();
-  updateSubcalcButtonLabel();
-  calculate();
 </script>
 
 </body>
